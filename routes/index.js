@@ -12,9 +12,7 @@ router.get('/', function(req, res, next) {
 });
 
 router.get('/index', async (req, res) => {
-  console.log(OPENSEARCH_URL)
   let r = await axios.get(OPENSEARCH_URL + "/serum_buy/_search").catch(res.error)
-  console.log(r)
 
   res.json(r)
 })

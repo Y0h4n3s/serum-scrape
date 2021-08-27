@@ -51,7 +51,6 @@ u.on('Event', async function () {
     var block = await conn.getBlock(slot)
   fs.readFile("./blocks_count", (err, data) => {
     var b = parseInt(data === undefined ? "0" : data.toString())
-      console.log(b)
     fs.writeFile("./blocks_count", String(b + 1), ()=>{})
   })
 
@@ -82,19 +81,21 @@ sender.on("Event", async () => {
     var clone = new Set(singles)
     singles.clear()
     // traverse each unique saved transaction and save after some more validation
+    var bulk = ""
     clone.forEach(transaction => {
         var markets = serum.MARKETS.filter(market => !market.deprecated).map(market => market.address.toBase58())
         var marketId = transaction.message.accountKeys.map(key => key.toBase58()).filter(key => markets.findIndex(k => k === key) !== -1)
         if (marketId.length !== 1) return
         var data = base58_to_binary(transaction.message.instructions[0].data)
         var price = new BN(data.slice(4, 12))
-        var post = {
-          marketId: marketId[0],
-          price: price.toString(10)
-        }
+        var post = `{"index": {"_index": "serum_buy"}}
+        {"marketId": ${marketId[0]}, "price": ${price.toString(10)}}`
+        bulk += post;
+    })
+    bulk += "\n\n"
         axios.post(
-            OPENSEARCH_URL + "/serum_buy/_doc",
-            JSON.stringify(post),
+            OPENSEARCH_URL + "/serum_buy/bulkdoc",
+            bulk,
             {headers: {"Content-Type": "application/json"}})
             .catch(console.error)
             .then(res => {
@@ -103,5 +104,5 @@ sender.on("Event", async () => {
                   fs.writeFile("./transactions_count", String(b + 1),()=>{})
                 })
             })
-    })
+
 })
