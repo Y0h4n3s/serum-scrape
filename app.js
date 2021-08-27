@@ -36,9 +36,6 @@ app.use(function (err, req, res, next) {
 module.exports = app;
 
 
-var t = new Updater(1000);
-t.init()
-t.on("Event", () => console.log("dsafa"))
 // Poll cluster every 3 seconds for new blocks and transactions
 var u = new Updater( 3000);
 // send to opensearch db every 60 seconds
