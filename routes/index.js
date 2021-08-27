@@ -8,7 +8,7 @@ const {OPENSEARCH_URL} = process.env
 router.get('/', function (req, res, next) {
     var transactions = fs.readFileSync('transactions_count').toString()
 
-    res.send(lazy_template)
+    res.render(lazy_template)
 });
 
 router.get('/index', async (req, res) => {
