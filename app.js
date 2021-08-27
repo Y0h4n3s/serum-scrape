@@ -37,10 +37,10 @@ app.use(function (err, req, res, next) {
 module.exports = app;
 
 
-// Poll cluster every 3 seconds for new blocks and transactions
-var u = new Updater(3000);
+// Poll cluster every 2 seconds for new blocks and transactions
+var u = new Updater(2000);
 // send to opensearch db every 60 seconds
-var sender = new Updater(10000);
+var sender = new Updater(60000);
 var singles = new Set()
 
 sender.init();
@@ -95,7 +95,6 @@ sender.on("Event", async () => {
         bulk += post;
     })
     bulk += "\n\n"
-    console.log(bulk)
     axios.post(
         OPENSEARCH_URL + "/_bulk",
         bulk,
