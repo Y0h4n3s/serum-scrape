@@ -90,8 +90,8 @@ sender.on("Event", async () => {
         if (marketId.length !== 1) return
         var data = base58_to_binary(transaction.message.instructions[0].data)
         var price = new BN(data.slice(4, 12))
-        var post = `{"index": {"_index": "serum_buy"}}
-{"marketId": ${marketId[0]}, "price": ${price.toString(10)}}\n`
+        var post = '{ "index": {"_index": "serum_buy" }}\n' +
+'{ "marketId": "' + marketId[0] +'", "price": "'+price.toString(10)+'"}\n'
         bulk += post;
     })
     bulk += "\n"
