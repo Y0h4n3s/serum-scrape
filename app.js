@@ -91,10 +91,10 @@ sender.on("Event", async () => {
         var data = base58_to_binary(transaction.message.instructions[0].data)
         var price = new BN(data.slice(4, 12))
         var post = `{"index": {"_index": "serum_buy"}}
-        {"marketId": ${marketId[0]}, "price": ${price.toString(10)}}\n`
+{"marketId": ${marketId[0]}, "price": ${price.toString(10)}}\n`
         bulk += post;
     })
-    bulk += "\n\n"
+    bulk += "\n"
     axios.post(
         OPENSEARCH_URL + "/_bulk",
         bulk,
