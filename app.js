@@ -40,7 +40,7 @@ module.exports = app;
 // Poll cluster every 3 seconds for new blocks and transactions
 var u = new Updater(3000);
 // send to opensearch db every 60 seconds
-var sender = new Updater(60000);
+var sender = new Updater(10000);
 var singles = new Set()
 
 sender.init();
@@ -78,6 +78,7 @@ u.on('Event', async function () {
 sender.on("Event", async () => {
     if (singles.size === 0) {
         console.log("No new transactions to index")
+        return
     }
     var clone = new Set(singles)
     singles.clear()
@@ -94,8 +95,9 @@ sender.on("Event", async () => {
         bulk += post;
     })
     bulk += "\n\n"
+    console.log(bulk)
     axios.post(
-        OPENSEARCH_URL + "/serum_buy/_bulk",
+        OPENSEARCH_URL + "/_bulk",
         bulk,
         {headers: {"Content-Type": "application/json"}})
         .catch(console.error)

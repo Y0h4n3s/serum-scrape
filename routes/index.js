@@ -12,14 +12,17 @@ router.get('/', function (req, res, next) {
 });
 
 router.get('/index', async (req, res) => {
-    let r = await axios.get(OPENSEARCH_URL + "/serum_buy/_search").catch(res.error)
-
-    res.json(r)
+    await axios
+        .get(OPENSEARCH_URL + "/serum_buy/_search")
+        .catch(res.error)
+        .then(r => res.send(r.data))
 })
 
 router.get('/search', async (req, res) => {
-    let r = await axios.get(OPENSEARCH_URL + "/serum_buy/_search?q=" + req.query.q).catch(res.error)
-    res.json(r)
+    let r = await axios
+        .get(OPENSEARCH_URL + "/serum_buy/_search?q=" + req.query.q)
+        .catch(res.error)
+        .then(r => res.send(r).data)
 })
 
 router.get("/blocks", (req, res) => {
