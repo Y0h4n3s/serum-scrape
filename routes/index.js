@@ -22,7 +22,7 @@ router.get('/search', async (req, res) => {
     let r = await axios
         .get(OPENSEARCH_URL + "/serum_buy/_search?q=" + req.query.q)
         .catch(res.error)
-        .then(r => res.send(r).data)
+        .then(r => res.send(r.data))
 })
 
 router.get("/blocks", (req, res) => {
