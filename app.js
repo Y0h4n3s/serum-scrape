@@ -1,4 +1,4 @@
-var createError = require('http-errors');
+const createError = require('http-errors');
 var express = require('express');
 var Updater = require('./helpers/updateHelper');
 var solanaWeb3 = require('@solana/web3.js')
@@ -33,11 +33,12 @@ app.use(function (err, req, res, next) {
     res.render('error');
 });
 
+
 module.exports = app;
 
 
 // Poll cluster every 3 seconds for new blocks and transactions
-var u = new Updater( 3000);
+var u = new Updater(3000);
 // send to opensearch db every 60 seconds
 var sender = new Updater(60000);
 var singles = new Set()
@@ -48,10 +49,11 @@ u.on('Event', async function () {
     var conn = new solanaWeb3.Connection("https://api.mainnet-beta.solana.com")
     var slot = await conn.getSlot()
     var block = await conn.getBlock(slot)
-  fs.readFile("./blocks_count", (err, data) => {
-    var b = parseInt(data === undefined ? "0" : data.toString())
-    fs.writeFile("./blocks_count", String(b + 1), ()=>{})
-  })
+    fs.readFile("./blocks_count", (err, data) => {
+        var b = parseInt(data === undefined ? "0" : data.toString())
+        fs.writeFile("./blocks_count", String(b + 1), () => {
+        })
+    })
 
     block.transactions.forEach(transaction => {
         transaction.transaction.message.accountKeys.forEach(account => {
@@ -92,16 +94,17 @@ sender.on("Event", async () => {
         bulk += post;
     })
     bulk += "\n\n"
-        axios.post(
-            OPENSEARCH_URL + "/serum_buy/_bulk",
-            bulk,
-            {headers: {"Content-Type": "application/json"}})
-            .catch(console.error)
-            .then(res => {
-                fs.readFile("./transactions_count", (err, data) => {
-                  var b = parseInt(data === undefined ? "0" : data.toString())
-                  fs.writeFile("./transactions_count", String(b + clone.size),()=>{})
+    axios.post(
+        OPENSEARCH_URL + "/serum_buy/_bulk",
+        bulk,
+        {headers: {"Content-Type": "application/json"}})
+        .catch(console.error)
+        .then(res => {
+            fs.readFile("./transactions_count", (err, data) => {
+                var b = parseInt(data === undefined ? "0" : data.toString())
+                fs.writeFile("./transactions_count", String(b + clone.size), () => {
                 })
             })
+        })
 
 })

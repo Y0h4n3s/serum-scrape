@@ -5,31 +5,31 @@ var axios = require('axios')
 require('dotenv').config()
 /* GET home page. */
 const {OPENSEARCH_URL} = process.env
-router.get('/', function(req, res, next) {
-  var transactions = fs.readFileSync('transactions_count').toString()
+router.get('/', function (req, res, next) {
+    var transactions = fs.readFileSync('transactions_count').toString()
 
-  res.send(lazy_template)
+    res.send(lazy_template)
 });
 
 router.get('/index', async (req, res) => {
-  let r = await axios.get(OPENSEARCH_URL + "/serum_buy/_search").catch(res.error)
+    let r = await axios.get(OPENSEARCH_URL + "/serum_buy/_search").catch(res.error)
 
-  res.json(r)
+    res.json(r)
 })
 
 router.get('/search', async (req, res) => {
-  let r = await axios.get(OPENSEARCH_URL + "/serum_buy/_search?q=" + req.query.q).catch(res.error)
-  res.json(r)
+    let r = await axios.get(OPENSEARCH_URL + "/serum_buy/_search?q=" + req.query.q).catch(res.error)
+    res.json(r)
 })
 
 router.get("/blocks", (req, res) => {
-  var blocks = fs.readFileSync('blocks_count').toString()
-  res.send(blocks)
+    var blocks = fs.readFileSync('blocks_count').toString()
+    res.send(blocks)
 })
 
 router.get("/transactions", (req, res) => {
-  var transactions = fs.readFileSync('transactions_count').toString()
-  res.send(transactions)
+    var transactions = fs.readFileSync('transactions_count').toString()
+    res.send(transactions)
 })
 module.exports = router;
 
@@ -44,7 +44,7 @@ const lazy_template = "<html lang=\"en\">\n" +
     <p>Transaction: <span id="transactions">0</span></p>
     <p>Index: <a href="/index">Here...</a> </p>
     <p>Query: <a href="/search?q=<query>">Here...</a> </p>
-`+
+` +
     `<script> var e = async () => {
     var sleep = async (time) => await new Promise((resolve) => setTimeout(resolve, time));
 

@@ -4,11 +4,11 @@ function Updater(time) {
     this.time = time;
     var that;
     events.EventEmitter.call(this);
-    this.init = function() {
+    this.init = function () {
         that = this;
-        setInterval(that.run,that.time);
+        setInterval(that.run, that.time);
     };
-    this.run = function() {
+    this.run = function () {
         that.emit('Event');
     };
 }
