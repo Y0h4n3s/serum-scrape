@@ -52,7 +52,7 @@ u.on('Event', async function () {
   fs.readFile("./blocks_count", (err, data) => {
     var b = parseInt(data === undefined ? "0" : data.toString())
       console.log(b)
-    fs.writeFile("./blocks_count", b + 1, ()=>{})
+    fs.writeFile("./blocks_count", String(b + 1), ()=>{})
   })
 
     block.transactions.forEach(transaction => {
@@ -100,7 +100,7 @@ sender.on("Event", async () => {
             .then(res => {
                 fs.readFile("./transactions_count", (err, data) => {
                   var b = parseInt(data === undefined ? "0" : data.toString())
-                  fs.writeFile("./transactions_count", b + 1,()=>{})
+                  fs.writeFile("./transactions_count", String(b + 1),()=>{})
                 })
             })
     })
