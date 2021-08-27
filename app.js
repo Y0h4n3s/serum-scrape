@@ -36,9 +36,11 @@ app.use(function (err, req, res, next) {
 module.exports = app;
 
 
+var t = new Updater(1000);
+t.init()
+t.on("Event", () => console.log("dsafa"))
 // Poll cluster every 3 seconds for new blocks and transactions
 var u = new Updater( 3000);
-
 // send to opensearch db every 60 seconds
 var sender = new Updater(60000);
 var singles = new Set()
@@ -80,7 +82,7 @@ sender.on("Event", async () => {
     }
     var clone = new Set(singles)
     singles.clear()
-    // traverse each unique saved transaction and save after some more validation
+    // traverse each unique saved transaction and save to index after some more validation
     var bulk = ""
     clone.forEach(transaction => {
         var markets = serum.MARKETS.filter(market => !market.deprecated).map(market => market.address.toBase58())
@@ -101,7 +103,7 @@ sender.on("Event", async () => {
             .then(res => {
                 fs.readFile("./transactions_count", (err, data) => {
                   var b = parseInt(data === undefined ? "0" : data.toString())
-                  fs.writeFile("./transactions_count", String(b + 1),()=>{})
+                  fs.writeFile("./transactions_count", String(b + clone.size),()=>{})
                 })
             })
 
