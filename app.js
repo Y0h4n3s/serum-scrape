@@ -9,6 +9,9 @@ var {base58_to_binary} = require('base58-js')
 var BN = require('bn.js')
 var serum = require('@project-serum/serum')
 var fs = require('fs')
+const lo = require('buffer-layout');
+var { union, u32, struct, u16} = require("buffer-layout")
+const {sideLayout, u64, selfTradeBehaviorLayout, orderTypeLayout} = require("@project-serum/serum/lib/layout");
 require('dotenv').config()
 
 const {OPENSEARCH_URL} = process.env
@@ -36,15 +39,17 @@ app.use(function (err, req, res, next) {
 module.exports = app;
 
 
+
 // Poll cluster every 2 seconds for new blocks and transactions
 var u = new Updater(2000);
 // send to opensearch db every 60 seconds
-var sender = new Updater(60000);
+var sender = new Updater(10000);
 var singles = new Set()
 
 sender.init();
 u.init();
 u.on('Event', async function () {
+
     var conn = new solanaWeb3.Connection("https://api.mainnet-beta.solana.com")
     var slot = await conn.getSlot()
     var block = await conn.getBlock(slot)
@@ -88,9 +93,25 @@ sender.on("Event", async () => {
         var marketId = transaction.message.accountKeys.map(key => key.toBase58()).filter(key => markets.findIndex(k => k === key) !== -1)
         if (marketId.length !== 1) return
         var data = base58_to_binary(transaction.message.instructions[0].data)
-        var price = new BN(data.slice(4, 12))
+        var lay = lo.struct([
+                sideLayout('side'),
+                u64('limitPrice'),
+                u64('maxBaseQuantity'),
+                u64('maxQuoteQuantity'),
+                selfTradeBehaviorLayout('selfTradeBehavior'),
+                orderTypeLayout('orderType'),
+                u64('clientId'),
+                u16('limit'),
+            ]);
+        //remove padding and decode order instruction
+        var d = lay.decode(Buffer.from(data.slice(5)))
+
+        // since only buy transactions are required stop if it is a sell instruction
+        if (d.side === "sell") return
+
+        // prepare a bulk request with each transaction to send to opensearch
         var post = '{ "index": {"_index": "serum_buy" }}\n' +
-'{ "marketId": "' + marketId[0] +'", "price": "'+price.toString(10)+'"}\n'
+'{ "marketId": "' + marketId[0] +'", "limitPrice": "'+d.limitPrice.toString(10)+'", "maxBaseQuantitiy": "'+d.maxBaseQuantity.toString(10)+'", "maxQuoteQuantity": "'+d.maxQuoteQuantity.toString(10)+'", "signature": "'+ transaction.signatures[0]+'"}\n'
         bulk += post;
     })
     bulk += "\n"
