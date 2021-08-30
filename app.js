@@ -44,6 +44,8 @@ module.exports = app;
 var u = new Updater(2000);
 // send to opensearch db every 60 seconds
 var sender = new Updater(10000);
+
+// A set to hold unique transactions since transactions are replicated when they are confirmed
 var singles = new Set()
 
 sender.init();
@@ -53,6 +55,9 @@ u.on('Event', async function () {
     var conn = new solanaWeb3.Connection("https://api.mainnet-beta.solana.com")
     var slot = await conn.getSlot()
     var block = await conn.getBlock(slot)
+
+
+    // this is just to store the number of blocks scraped
     fs.readFile("./blocks_count", (err, data) => {
         var b = parseInt(data === undefined ? "0" : data.toString())
         fs.writeFile("./blocks_count", String(b + 1), () => {
@@ -65,8 +70,9 @@ u.on('Event', async function () {
             var programId = transaction.transaction.message.accountKeys[transaction.transaction.message.instructions[0].programIdIndex].toBase58()
             if (programId === "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin" && transaction.transaction.message.instructions.length === 1) {
                 var instruction = transaction.transaction.message.instructions[0]
+                // look for `Serum New Order` instructions with the number of accounts the instructions requires
                 if (transaction.transaction.message.accountKeys[instruction.programIdIndex].toBase58() === "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin" && base58_to_binary(instruction.data).length === 51 && (instruction.accounts.length === 13 || instruction.accounts.length === 12)) {
-                    // keep transaction to send to opensearch
+                    // keep new order ix in a set so it is not repeated
                     singles.add(transaction.transaction)
 
                 }
@@ -85,6 +91,8 @@ sender.on("Event", async () => {
         return
     }
     var clone = new Set(singles)
+
+
     singles.clear()
     // traverse each unique saved transaction and save to index after some more validation
     var bulk = ""
@@ -93,6 +101,8 @@ sender.on("Event", async () => {
         var marketId = transaction.message.accountKeys.map(key => key.toBase58()).filter(key => markets.findIndex(k => k === key) !== -1)
         if (marketId.length !== 1) return
         var data = base58_to_binary(transaction.message.instructions[0].data)
+
+        // data format for neworder ix v3
         var lay = lo.struct([
                 sideLayout('side'),
                 u64('limitPrice'),
@@ -115,12 +125,15 @@ sender.on("Event", async () => {
         bulk += post;
     })
     bulk += "\n"
+
+    // index the transaction
     axios.post(
         OPENSEARCH_URL + "/_bulk",
         bulk,
         {headers: {"Content-Type": "application/json"}})
         .catch(console.error)
         .then(res => {
+            // this is just to store the number of transactions that were indexed successfully
             fs.readFile("./transactions_count", (err, data) => {
                 var b = parseInt(data === undefined ? "0" : data.toString())
                 fs.writeFile("./transactions_count", String(b + clone.size), () => {
