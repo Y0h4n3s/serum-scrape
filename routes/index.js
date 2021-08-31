@@ -6,8 +6,6 @@ require('dotenv').config()
 /* GET home page. */
 const {OPENSEARCH_URL} = process.env
 router.get('/', function (req, res, next) {
-    var transactions = fs.readFileSync('transactions_count').toString()
-
     res.render('index')
 });
 
