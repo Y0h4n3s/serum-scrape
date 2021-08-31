@@ -11,7 +11,6 @@ require('dotenv').config()
 const {CLUSTER_URL= "https://api.mainnet-beta.solana.com", OPENSEARCH_URL} = process.env
 
 async function DbIndexer({scraper, marketsMap}) {
-    console.log(scraper)
         const  singles = scraper.singles
         let clone = new Set(singles)
         scraper.clearSingles();
@@ -59,7 +58,7 @@ async function DbIndexer({scraper, marketsMap}) {
 
                 let currentToken = mainnetTokens.filter(tkn => tkn.address === market.baseMintAddress.toBase58())[0]
                 let post = '{ "index": {"_index": "serum_buy" }}\n' +
-                    '{ "marketId": "' + marketId[0] + '", "limitPrice": "' + market.priceLotsToNumber(d.limitPrice) + '", "maxBaseQuantity": "' + market.baseSizeLotsToNumber(d.maxBaseQuantity) + '", "maxQuoteQuantity": "' + market.quoteSizeLotsToNumber(d.maxQuoteQuantity) + '", "signature": "' + transaction.signatures[0] + '", "decimals": "' + currentToken.decimals + '", "tokenSymbol": "' + currentToken.symbol + '"}\n'
+                    '{ "marketId": "' + marketId[0] + '", "expense": "' + market.priceLotsToNumber(d.limitPrice)  * market.baseSizeLotsToNumber(d.maxBaseQuantity) + '", "limitPrice": "' + market.priceLotsToNumber(d.limitPrice) + '", "maxBaseQuantity": "' + market.baseSizeLotsToNumber(d.maxBaseQuantity) + '", "maxQuoteQuantity": "' + market.quoteSizeLotsToNumber(d.maxQuoteQuantity) + '", "signature": "' + transaction.signatures[0] + '", "decimals": "' + currentToken.decimals + '", "tokenSymbol": "' + currentToken.symbol + '"}\n'
                 bulk += post;
             }
 

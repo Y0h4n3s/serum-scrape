@@ -8,6 +8,9 @@
       "marketId": {
         "type": "text"
       },
+      "expense": {
+        "type": "text"
+      },
       "limitPrice": {
         "type": "text"
       },
