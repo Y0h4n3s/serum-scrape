@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@project-serum/serum": "^0.13.57",
+    "@solana/spl-token-registry": "^0.2.226",
     "@solana/web3.js": "^1.24.1",
     "axios": "^0.21.1",
     "base58-js": "^1.0.0",

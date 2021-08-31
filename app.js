@@ -1,23 +1,28 @@
 const createError = require('http-errors');
-var express = require('express');
-var Updater = require('./helpers/updateHelper');
-var solanaWeb3 = require('@solana/web3.js')
-var indexRouter = require('./routes/index');
-var axios = require('axios')
-var app = express();
-var {base58_to_binary} = require('base58-js')
-var BN = require('bn.js')
-var serum = require('@project-serum/serum')
-var fs = require('fs')
+const express = require('express');
+const Updater = require('./helpers/updateHelper');
+const solanaWeb3 = require('@solana/web3.js');
+const indexRouter = require('./routes/index');
+const axios = require('axios');
+const app = express();
+const {base58_to_binary} = require('base58-js');
+const BN = require('bn.js');
+const serum = require('@project-serum/serum');
+const fs = require('fs');
 const lo = require('buffer-layout');
-var { union, u32, struct, u16} = require("buffer-layout")
-const {sideLayout, u64, selfTradeBehaviorLayout, orderTypeLayout} = require("@project-serum/serum/lib/layout");
+const {union, u32, struct, u16, blob, seq} = require("buffer-layout");
+const {sideLayout, u64, selfTradeBehaviorLayout, orderTypeLayout, accountFlagsLayout, publicKeyLayout, u128} = require("@project-serum/serum/lib/layout");
+const tokenList = require('@solana/spl-token-registry')
+const DbSender = require("./helpers/dbIndexer");
+const Scraper = require("./helpers/scraper");
 require('dotenv').config()
 
-const {OPENSEARCH_URL} = process.env
+const {CLUSTER_URL= "https://api.mainnet-beta.solana.com"} = process.env
+
+
 app.use(express.json());
 app.use(express.urlencoded({extended: false}));
-
+app.set('view engine', 'jade')
 app.use('/', indexRouter);
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
@@ -38,107 +43,77 @@ app.use(function (err, req, res, next) {
 
 module.exports = app;
 
+let marketsMap = {}
 
+
+// 3 modules
+// 1. scraper: parses blocks on solana chain and filters out serum program transactions and saves them without replicating
+// 2. sender: takes the saved txs and stores them in an openbase cluster hosted @ https://bonsai.io. after adding some more info like price, tokenName, price...
+// 3. serumMarketsMapper: run initially and every 6 hours, loads all of serums markets and their mints beforehand.
 
 // Poll cluster every 2 seconds for new blocks and transactions
-var u = new Updater(2000);
+var scraper = new Updater(2000, "scrape", {});
+scraper.init();
+
 // send to opensearch db every 60 seconds
-var sender = new Updater(10000);
-
-// A set to hold unique transactions since transactions are replicated when they are confirmed
-var singles = new Set()
-
+var sender = new Updater(3000, "send", {scraper: Scraper, marketsMap: marketsMap});
 sender.init();
-u.init();
-u.on('Event', async function () {
 
-    var conn = new solanaWeb3.Connection("https://api.mainnet-beta.solana.com")
-    var slot = await conn.getSlot()
-    var block = await conn.getBlock(slot)
+// update serum market mint addresses every 6 hrs
+var serumMarketsMapper = new Updater(  6 * 60 * 60 * 1000, "update")
+serumMarketsMapper.init();
 
-
-    // this is just to store the number of blocks scraped
-    fs.readFile("./blocks_count", (err, data) => {
-        var b = parseInt(data === undefined ? "0" : data.toString())
-        fs.writeFile("./blocks_count", String(b + 1), () => {
-        })
-    })
-
-    block.transactions.forEach(transaction => {
-        transaction.transaction.message.accountKeys.forEach(account => {
-            // filter transactions by serum dex program
-            var programId = transaction.transaction.message.accountKeys[transaction.transaction.message.instructions[0].programIdIndex].toBase58()
-            if (programId === "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin" && transaction.transaction.message.instructions.length === 1) {
-                var instruction = transaction.transaction.message.instructions[0]
-                // look for `Serum New Order` instructions with the number of accounts the instructions requires
-                if (transaction.transaction.message.accountKeys[instruction.programIdIndex].toBase58() === "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin" && base58_to_binary(instruction.data).length === 51 && (instruction.accounts.length === 13 || instruction.accounts.length === 12)) {
-                    // keep new order ix in a set so it is not repeated
-                    singles.add(transaction.transaction)
-
-                }
-
-
-            }
-        })
-
-
-    })
-});
-
-sender.on("Event", async () => {
-    if (singles.size === 0) {
-        console.log("No new transactions to index")
-        return
-    }
-    var clone = new Set(singles)
-
-
-    singles.clear()
-    // traverse each unique saved transaction and save to index after some more validation
-    var bulk = ""
-    clone.forEach(transaction => {
-        var markets = serum.MARKETS.filter(market => !market.deprecated).map(market => market.address.toBase58())
-        var marketId = transaction.message.accountKeys.map(key => key.toBase58()).filter(key => markets.findIndex(k => k === key) !== -1)
-        if (marketId.length !== 1) return
-        var data = base58_to_binary(transaction.message.instructions[0].data)
-
-        // data format for neworder ix v3
-        var lay = lo.struct([
-                sideLayout('side'),
-                u64('limitPrice'),
-                u64('maxBaseQuantity'),
-                u64('maxQuoteQuantity'),
-                selfTradeBehaviorLayout('selfTradeBehavior'),
-                orderTypeLayout('orderType'),
-                u64('clientId'),
-                u16('limit'),
-            ]);
-        //remove padding and decode order instruction
-        var d = lay.decode(Buffer.from(data.slice(5)))
-
-        // since only buy transactions are required stop if it is a sell instruction
-        if (d.side === "sell") return
-
-        // prepare a bulk request with each transaction to send to opensearch
-        var post = '{ "index": {"_index": "serum_buy" }}\n' +
-'{ "marketId": "' + marketId[0] +'", "limitPrice": "'+d.limitPrice.toString(10)+'", "maxBaseQuantitiy": "'+d.maxBaseQuantity.toString(10)+'", "maxQuoteQuantity": "'+d.maxQuoteQuantity.toString(10)+'", "signature": "'+ transaction.signatures[0]+'"}\n'
-        bulk += post;
-    })
-    bulk += "\n"
-
-    // index the transaction
-    axios.post(
-        OPENSEARCH_URL + "/_bulk",
-        bulk,
-        {headers: {"Content-Type": "application/json"}})
-        .catch(console.error)
-        .then(res => {
-            // this is just to store the number of transactions that were indexed successfully
-            fs.readFile("./transactions_count", (err, data) => {
-                var b = parseInt(data === undefined ? "0" : data.toString())
-                fs.writeFile("./transactions_count", String(b + clone.size), () => {
-                })
-            })
-        })
-
+serumMarketsMapper.on("update",async () => {
+    await setupMarkets();
 })
+serumMarketsMapper.emit("update")
+
+
+
+
+// populate marketsMap with market objects for later use
+// since this is mostly static and not likely to change frequently
+async function setupMarkets() {
+    // remove listeners since they depend on marketsMap
+    sender.removeListener('send', DbSender)
+    scraper.removeListener('scrape', Scraper.Scraper)
+    const markets = serum.MARKETS.filter(market => !market.deprecated).map(market => market.address.toBase58());
+
+    const conn = new solanaWeb3.Connection(CLUSTER_URL);
+    let retries = 5
+    while (true) {
+        try {
+            const tempMap = {};
+            for (const market of markets) {
+                tempMap[market] = await serum.Market.load(
+                    conn,
+                    new solanaWeb3.PublicKey(market),
+                    {},
+                    new solanaWeb3.PublicKey("9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin")
+                )
+                console.log("done: ", (((markets.indexOf(market) + 1) / markets.length) * 100), "%")
+                // sleep for some milli secs to avoid `429 Too Many Requests` responses
+                await sleep(500)
+            }
+            retries--
+            if (Object.keys(tempMap).length === markets.length || retries < 0) {
+                marketsMap = tempMap
+                break
+            }
+            console.log("Incomplete, Retrying...")
+        }catch (e) {
+            console.error("Error on setting up:", e)
+
+        }
+    }
+
+    sender.setArgs({scraper: Scraper, marketsMap: marketsMap})
+    // reactivate listeners
+    sender.on("send", DbSender)
+    scraper.on('scrape', Scraper.Scraper)
+
+}
+
+const sleep = async (time) => {
+    return new Promise(resolve => setTimeout(resolve, time))
+}

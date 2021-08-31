@@ -1,7 +1,9 @@
 var events = require('events');
 
-function Updater(time) {
+function Updater(time, event, args) {
     this.time = time;
+    this.event = event;
+    this.args = args
     var that;
     events.EventEmitter.call(this);
     this.init = function () {
@@ -9,8 +11,12 @@ function Updater(time) {
         setInterval(that.run, that.time);
     };
     this.run = function () {
-        that.emit('Event');
+        that.emit(that.event, that.args);
     };
+
+    this.setArgs = function(args) {
+        that.args = args
+    }
 }
 
 Updater.prototype.__proto__ = events.EventEmitter.prototype;

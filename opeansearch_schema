@@ -1,0 +1,31 @@
+{
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 0
+  },
+  "mappings": {
+    "properties": {
+      "marketId": {
+        "type": "text"
+      },
+      "limitPrice": {
+        "type": "text"
+      },
+      "maxBaseQuantitiy": {
+        "type": "text"
+      },
+      "maxQuoteQuantity": {
+        "type": "text"
+      },
+      "signature": {
+        "type": "text"
+      },
+      "decimals": {
+        "type": "text"
+      },
+      "tokenSymbol": {
+        "type": "text"
+      }
+    }
+  }
+}

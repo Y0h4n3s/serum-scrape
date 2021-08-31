@@ -2,4 +2,10 @@ extends layout
 
 block content
   h1= title
-  p Welcome to #{title}
+  p go to /index to see all indexed transactions. or
+  p go to /search?q=<marketId, tokenSymbol, ...> to search for specific transactions
+  p for example /search?q=ETH will load transactions for ETH bought on serum dex with some detail.
+
+  p The opensearch db is hosted at bonsai  https://bonsai.io
+  p since it is on a free plan it may get past its usage limit after some time and stop adding new indexes.
+  p send me a message @ y0h4n3sk4ssu@gmail.com or @y0h4n3s on telegram
