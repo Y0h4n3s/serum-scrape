@@ -56,7 +56,7 @@ var scraper = new Updater(2000, "scrape", {});
 scraper.init();
 
 // send to opensearch db every 60 seconds
-var sender = new Updater(3000, "send", {scraper: Scraper, marketsMap: marketsMap});
+var sender = new Updater(60000, "send", {scraper: Scraper, marketsMap: marketsMap});
 sender.init();
 
 // update serum market mint addresses every 6 hrs
