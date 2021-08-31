@@ -65,8 +65,6 @@ async function DbIndexer({scraper, marketsMap}) {
 
             if (bulk === "")  return
             bulk += "\n"
-            console.log(bulk)
-            console.log("not here")
 
             // index the transactions
             axios.post(
