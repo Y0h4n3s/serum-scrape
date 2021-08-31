@@ -1,11 +1,25 @@
 extends layout
 
 block content
-  h1= title
-  p go to /index to see all indexed transactions. or
+  h1 Hello there
+  p go to <a href=/index>/index</a> to see all indexed transactions. or
   p go to /search?q=<marketId, tokenSymbol, ...> to search for specific transactions
-  p for example /search?q=ETH will load transactions for ETH bought on serum dex with some detail.
-
+  p for example <a href=/search?q=ETH>/search?q=ETH</a> will load transactions for ETH bought on serum dex with some detail.
+  br
+  hr
+  br
+  p the returned value will be json object with the following fields
+  p marketId: the address where serum stores metadata about that market.
+  p expense: the amount paid or to be paid in USDT
+  p limitPrice: the buying price
+  p maxBaseQuantity: size or, the amount of tokens bought
+  p signature: the transactions signature
+  p decimals: the tokens decimals
+  p tokenSymbol: the symbol of the token that is bought
+  p I suggest using solscan.io to see the transactions as. They shows a more detailed output for serum dex's ixs
+  br
+  hr
+  br
   p The opensearch db is hosted at bonsai  https://bonsai.io
   p since it is on a free plan it may get past its usage limit after some time and stop adding new indexes.
   p send me a message @ y0h4n3sk4ssu@gmail.com or @y0h4n3s on telegram

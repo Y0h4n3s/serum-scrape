@@ -17,9 +17,6 @@
       "maxBaseQuantitiy": {
         "type": "text"
       },
-      "maxQuoteQuantity": {
-        "type": "text"
-      },
       "signature": {
         "type": "text"
       },
